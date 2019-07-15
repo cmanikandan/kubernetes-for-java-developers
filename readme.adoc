@@ -89,22 +89,6 @@ The source code is in the `app` directory.
 +
 Explain multi-stage Dockerfile.
 
-=== Build Docker Image using https://github.com/GoogleContainerTools/jib[Jib]
-
-. Create Docker image:
-
-    mvn compile jib:build -Pjib
-
-The benefits of using Jib over a multi-stage Dockerfile build include:
-
-* Don't need to install Docker or run a Docker daemon
-* Don't need to write a Dockerfile or build the archive of m2 dependencies
-* Much faster
-* Builds reproducibly
-
-The above builds directly to your Docker registry. Alternatively, Jib can also build to a Docker daemon:
-
-    mvn compile jib:dockerBuild -Pjib -Ddocker.name=arungupta/greeting
 
 === Test built container using Docker
 
