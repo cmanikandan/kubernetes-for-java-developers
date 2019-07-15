@@ -3,6 +3,8 @@
 
 Deploying your Java application in a Kubernetes cluster could feel like Alice in Wonderland. You keep going down the rabbit hole and don't know how to make that ride comfortable. This repository explains how a Java application can be deployed, tested, debugged and monitored in Kubernetes. In addition, it also talks about canary deployment and deployment pipeline.
 
+These steps are a shorter version of the complete sample code and steps at https://github.com/aws-samples/kubernetes-for-java-developers
+
 A comprehensive hands-on course explaining these concepts is available at https://www.linkedin.com/learning/kubernetes-for-java-developers.
 
 == Application
@@ -190,23 +192,6 @@ image::images/docker-debug3.png[]
 
 	helm delete --purge myapp
 
-=== Debug using Docker
-
-This was tested using Docker for Mac.
-
-. Run container:
-
-	docker container run --name greeting -p 8080:8080 -p 5005:5005 -d arungupta/greeting
-
-. Check container:
-
-	$ docker container ls -a
-	CONTAINER ID        IMAGE                COMMAND                  CREATED             STATUS              PORTS                                            NAMES
-	724313157e3c        arungupta/greeting   "java -jar app-swarm…"   3 seconds ago       Up 2 seconds        0.0.0.0:5005->5005/tcp, 0.0.0.0:8080->8080/tcp   greeting
-
-. Setup breakpoint as explained above.
-. Access the application using `curl http://localhost:8080/resources/greeting`.
-
 == Kubernetes Cluster on AWS
 
 This application will be deployed to an https://aws.amazon.com/eks/[Amazon EKS] cluster. If you're looking for a self-paced workshop that provide detailed instructions to get you started with EKS then https://eksworkshop.com[eksworkshop.com] is your place.
@@ -392,117 +377,7 @@ All scripts used in this section are in the `manifests/appmesh` directory.
 
 . `CTRL`+`C` to break the loop.
 
-== Service Mesh using Istio
 
-https://istio.io/[Istio] is is a layer 4/7 proxy that routes and load balances traffic over HTTP, WebSocket, HTTP/2, gRPC and supports application protocols such as MongoDB and Redis. Istio uses the Envoy proxy to manage all inbound/outbound traffic in the service mesh.
-
-Istio has a wide variety of traffic management features that live outside the application code, such as A/B testing, phased/canary rollouts, failure recovery, circuit breaker, layer 7 routing and policy enforcement (all provided by the Envoy proxy). Istio also supports ACLs, rate limits, quotas, authentication, request tracing and telemetry collection using its Mixer component. The goal of the Istio project is to support traffic management and security of microservices without requiring any changes to the application; it does this by injecting a sidecar into your pod that handles all network communications.
-
-More details at https://aws.amazon.com/blogs/opensource/getting-started-istio-eks/[Getting Started with Istio on Amazon EKS].
-
-=== Install and Configure
-
-. Download Istio:
-
-	curl -L https://git.io/getLatestIstio | sh -
-	cd istio-1.*
-
-. Include `istio-1.*/bin` directory in `PATH`
-. Install Istio on Amazon EKS:
-
-	helm install \
-		--wait \
-		--name istio \
-		--namespace istio-system \
-		install/kubernetes/helm/istio \
-		--set tracing.enabled=true \
-		--set grafana.enabled=true
-
-. Verify:
-+
-	kubectl get pods -n istio-system
-	NAME                                        READY   STATUS    RESTARTS   AGE
-	grafana-75485f89b9-4lwg5                    1/1     Running   0          1m
-	istio-citadel-84fb7985bf-4dkcx              1/1     Running   0          1m
-	istio-egressgateway-bd9fb967d-bsrhz         1/1     Running   0          1m
-	istio-galley-655c4f9ccd-qwk42               1/1     Running   0          1m
-	istio-ingressgateway-688865c5f7-zj9db       1/1     Running   0          1m
-	istio-pilot-6cd69dc444-9qstf                2/2     Running   0          1m
-	istio-policy-6b9f4697d-g8hc6                2/2     Running   0          1m
-	istio-sidecar-injector-8975849b4-cnd6l      1/1     Running   0          1m
-	istio-statsd-prom-bridge-7f44bb5ddb-8r2zx   1/1     Running   0          1m
-	istio-telemetry-6b5579595f-nlst8            2/2     Running   0          1m
-	istio-tracing-ff94688bb-2w4wg               1/1     Running   0          1m
-	prometheus-84bd4b9796-t9kk5                 1/1     Running   0          1m
-+
-Check that both Tracing and Grafana add-ons are enabled.
-+
-. Enable side car injection for all pods in `default` namespace
-
-	kubectl label namespace default istio-injection=enabled
-
-. From the repo's main directory, deploy the application:
-
-	kubectl apply -f manifests/app.yaml
-
-. Check pods and note that it has two containers (one for the application and one for the sidecar):
-
-	kubectl get pods -l app=greeting
-	NAME                       READY     STATUS    RESTARTS   AGE
-	greeting-d4f55c7ff-6gz8b   2/2       Running   0          5s
-
-. Get list of containers in the pod:
-
-	kubectl get pods -l app=greeting -o jsonpath={.items[*].spec.containers[*].name}
-	greeting istio-proxy
-
-. Get response:
-
-  curl http://$(kubectl get svc/greeting \
-  	-o jsonpath='{.status.loadBalancer.ingress[0].hostname}')/hello
-
-=== Traffic Shifting
-
-. Deploy application with two versions of `greeting`, one that returns `Hello` and another that returns `Howdy`:
-
-  kubectl delete -f manifests/app.yaml
-  kubectl apply -f manifests/app-hello-howdy.yaml
-
-. Check the list of pods:
-
-	kubectl get pods -l app=greeting
-	NAME                              READY     STATUS    RESTARTS   AGE
-	greeting-hello-69cc7684d-7g4bx    2/2       Running   0          1m
-	greeting-howdy-788b5d4b44-g7pml   2/2       Running   0          1m
-
-. Access application multipe times to see different response:
-
-  for i in {1..10}
-  do
-  	curl -q http://$(kubectl get svc/greeting -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')/hello
-  	echo
-  done
-  
-. Setup an Istio rule to split traffic between 75% to `Hello` and 25% to `Howdy` version of the `greeting` service:
-
-  kubectl apply -f manifests/istio/app-rule-75-25.yaml
-
-. Invoke the service again to see the traffic split between two services.
-
-=== Canary Deployment
-
-. Setup an Istio rule to divert 10% traffic to canary:
-
-  kubectl delete -f manifests/istio/app-rule-75-25.yaml
-  kubectl apply -f manifests/istio/app-canary.yaml
-
-. Access application multipe times to see ~10% greeting messages with `Howdy`:
-
-  for i in {1..50}
-  do
-  	curl -q http://$(kubectl get svc/greeting -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')/hello
-  	echo
-  done
 
 === Distributed Tracing
 
@@ -591,34 +466,6 @@ https://github.com/asobti/kube-monkey[kube-monkey] is an implementation of Netfl
 
 This application agrees to kill up to 40% of pods. The schedule of deletion is defined by kube-monkey configuration and is defined to be between 10am and 4pm on weekdays.
 
-== Deployment Pipeline using Skaffold
-
-https://github.com/GoogleContainerTools/skaffold[Skaffold] is a command line utility that facilitates continuous development for Kubernetes applications. With Skaffold, you can iterate on your application source code locally then deploy it to a remote Kubernetes cluster.
-
-. Check context:
-
-	kubectl config get-contexts
-	CURRENT   NAME                               CLUSTER                       AUTHINFO                           NAMESPACE
-	          arun@eks-gpu.us-west-2.eksctl.io   eks-gpu.us-west-2.eksctl.io   arun@eks-gpu.us-west-2.eksctl.io   
-	*         arun@myeks.us-east-1.eksctl.io     myeks.us-east-1.eksctl.io     arun@myeks.us-east-1.eksctl.io     
-	          docker-for-desktop                 docker-for-desktop-cluster    docker-for-desktop
-
-. Change to use local Kubernetes cluster:
-
-	kubectl config use-context docker-for-desktop
-
-. Download Skaffold:
-
-	curl -Lo skaffold https://storage.googleapis.com/skaffold/releases/latest/skaffold-darwin-amd64 \
-		&& chmod +x skaffold
-
-. Open http://localhost:8080/resources/greeting in browser. This will show the page is not available.
-. Run Skaffold in the application directory:
-
-    cd app
-    skaffold dev
-
-. Refresh the page in browser to see the output.
 
 == Deployment Pipeline using CodePipeline
 
@@ -663,23 +510,4 @@ image::images/codepipeline-status.png[]
 	curl http://$(kubectl get svc/greeting -n default \
 		-o jsonpath='{.status.loadBalancer.ingress[0].hostname}'):8080/hello
 
-
-== Deployment Pipeline using Jenkins X
-
-. Install `jx` CLI:
-
-	brew tap jenkins-x/jx
-	brew install jx 
-
-. Create a new https://github.com/settings/tokens[GitHub token] with the following scope:
-+
-image::images/jenkinsx-github-token.png[]
-+
-. Install Jenkins X on Amazon EKS:
-+
-	jx install --provider=eks --git-username arun-gupta --git-api-token GITHUB_TOKEN --batch-mode 
-+
-link:images/jenkinsx-log.txt[Log] shows complete run of the command.
-+
-. Use `jx import` to import a project. Need `Dockerfile` and maven application in the root directory.
 
