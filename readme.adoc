@@ -104,7 +104,7 @@ Explain multi-stage Dockerfile.
 
 	docker container rm -f greeting
 
-== Minimal Docker Image using Custom JRE
+== Minimal Docker Image using Custom JRE (Optional)
 
 . Download http://download.oracle.com/otn-pub/java/jdk/11.0.1+13/90cf5d8f270a4347a95050320eef3fb7/jdk-11.0.1_linux-x64_bin.rpm[JDK 11] and `scp` to an https://aws.amazon.com/marketplace/pp/B00635Y2IW/ref=mkt_ste_ec2_lw_os_win[Amazon Linux] instance
 . Install JDK 11:
@@ -185,7 +185,7 @@ If Helm has already been initialized on the cluster, then you may have to upgrad
 . Access the application:
 
   	curl http://$(kubectl get svc/myapp-greeting \
-  		-o jsonpath='{.status.loadBalancer.ingress[0].hostname}'):8080/hello
+  		-o jsonpath='{.status.loadBalancer.ingress[0].hostname}'):80/hello
 
 == Debug Docker and Kubernetes using IntelliJ
 
