@@ -3,7 +3,7 @@
 
 Deploying your Java application in a Kubernetes cluster could feel like Alice in Wonderland. You keep going down the rabbit hole and don't know how to make that ride comfortable. This repository explains how a Java application can be deployed, tested, debugged and monitored in Kubernetes. In addition, it also talks about canary deployment and deployment pipeline.
 
-These steps are a shorter version of the complete sample code and steps available at https://github.com/aws-samples/kubernetes-for-java-developers by Arun Gupta and others ..
+These instructions are a shorter version of the complete sample code available at https://github.com/aws-samples/kubernetes-for-java-developers by Arun Gupta and others ..
 
 A comprehensive hands-on course explaining these concepts is available at https://www.linkedin.com/learning/kubernetes-for-java-developers.
 
