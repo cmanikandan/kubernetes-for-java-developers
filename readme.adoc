@@ -3,7 +3,7 @@
 
 Deploying your Java application in a Kubernetes cluster could feel like Alice in Wonderland. You keep going down the rabbit hole and don't know how to make that ride comfortable. This repository explains how a Java application can be deployed, tested, debugged and monitored in Kubernetes. In addition, it also talks about canary deployment and deployment pipeline.
 
-These instructions are a shorter version of the complete sample code available at https://github.com/aws-samples/kubernetes-for-java-developers by Arun Gupta and others ..
+These instructions are a shorter/modified version of the original sample code available at https://github.com/aws-samples/kubernetes-for-java-developers by Arun Gupta and others ..
 
 A comprehensive hands-on course explaining these concepts is available at https://www.linkedin.com/learning/kubernetes-for-java-developers.
 
@@ -210,7 +210,6 @@ One of the things that Java developers need to know, is check the application lo
 . Exec into the shell
 +
 	$  kubectl exec -it myapp-greeting-67dd4bb9d5-r2qts bash
-+
 
 === Debug using Kubernetes using IntelliJ (Optional)
 
@@ -237,7 +236,7 @@ image::images/docker-debug2.png[]
 . Access the application:
 
 	curl http://$(kubectl get svc/myapp-greeting \
-		-o jsonpath='{.status.loadBalancer.ingress[0].hostname}'):8080/hello
+		-o jsonpath='{.status.loadBalancer.ingress[0].hostname}'):80/hello
 
 . Show the breakpoint hit in IntelliJ:
 +
@@ -338,7 +337,10 @@ All scripts used in this section are in the `manifests/appmesh` directory.
 	kubectl create -f https://raw.githubusercontent.com/aws/aws-app-mesh-examples/master/examples/apps/djapp/3_add_crds/controller-deployment.yaml
 
 === Create App Mesh Components
-
+. Change directories
+	
+	cd manifests/appmesh
+	
 . Create a Mesh:
 
 	kubectl create -f mesh.yaml
@@ -385,92 +387,6 @@ All scripts used in this section are in the `manifests/appmesh` directory.
 
 
 
-=== Distributed Tracing
-
-Istio is deployed as a sidecar proxy into each of your pods; this means it can see and monitor all the traffic flows between your microservices and generate a graphical representation of your mesh traffic. We’ll use the application you deployed in the previous step to demonstrate this.
-
-By default, tracing is disabled. `--set tracing.enabled=true` was used during Istio installation to ensure tracing was enabled.
-
-Setup access to the tracing dashboard URL using port-forwarding:
-
-	kubectl port-forward \
-		-n istio-system \
-		pod/$(kubectl get pod \
-			-n istio-system \
-			-l app=jaeger \
-			-o jsonpath='{.items[0].metadata.name}') 16686:16686 &
-
-Access the dashboard at http://localhost:16686, click on `Dependencies`, `DAG`.
-
-image::images/istio-dag.png[]
-
-=== Metrics using Grafana
-
-. By default, Grafana is disabled. `--set grafana.enabled=true` was used during Istio installation to ensure Grafana was enabled. Alternatively, the Grafana add-on can be installed as:
-
-	kubectl apply -f install/kubernetes/addons/grafana.yaml
-
-. Verify:
-
-	kubectl get pods -l app=grafana -n istio-system
-	NAME                       READY     STATUS    RESTARTS   AGE
-	grafana-75485f89b9-n4skw   1/1       Running   0          10m
-
-. Forward Istio dashboard using Grafana UI:
-
-	kubectl -n istio-system \
-		port-forward $(kubectl -n istio-system \
-			get pod -l app=grafana \
-			-o jsonpath='{.items[0].metadata.name}') 3000:3000 &
-
-. View Istio dashboard http://localhost:3000. Click on `Home`, `Istio Workload Dashboard`.
-
-. Invoke the endpoint:
-
-	curl http://$(kubectl get svc/greeting \
-		-o jsonpath='{.status.loadBalancer.ingress[0].hostname}')/hello
-
-image::images/istio-dashboard.png[]
-
-=== Timeouts
-
-Delays and timeouts can be injected in services.
-
-. Deploy the application:
-
-   kubectl delete -f manifests/app.yaml
-   kubectl apply -f manifests/app-ingress.yaml
-
-. Add a 5 seconds delay to calls to the service:
-
-    kubectl apply -f manifests/istio/greeting-delay.yaml
-
-. Invoke the service using a 2 seconds timeout:
-
-	export INGRESS_HOST=$(kubectl -n istio-system get service istio-ingressgateway -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
-	export INGRESS_PORT=$(kubectl -n istio-system get service istio-ingressgateway -o jsonpath='{.spec.ports[?(@.name=="http")].port}')
-	export GATEWAY_URL=$INGRESS_HOST:$INGRESS_PORT
-	curl --connect-timeout 2 http://$GATEWAY_URL/resources/greeting
-
-The service will timeout in 2 seconds.
-
-== Chaos using kube-monkey
-
-https://github.com/asobti/kube-monkey[kube-monkey] is an implementation of Netflix's Chaos Monkey for Kubernetes clusters. It randomly deletes Kubernetes pods in the cluster encouraging and validating the development of failure-resilient services.
-
-. Create kube-monkey configuration:
-
-	kubectl apply -f manifests/kubemonkey/kube-monkey-configmap.yaml
-
-. Run kube-monkey:
-
-	kubectl apply -f manifests/kubemonkey/kube-monkey-deployment.yaml
-
-. Deploy an app that opts-in for pod deletion:
-
-	kubectl apply -f manifests/kubemonkey/app-kube-monkey.yaml
-
-This application agrees to kill up to 40% of pods. The schedule of deletion is defined by kube-monkey configuration and is defined to be between 10am and 4pm on weekdays.
 
 
 == Deployment Pipeline using CodePipeline
@@ -517,3 +433,10 @@ image::images/codepipeline-status.png[]
 		-o jsonpath='{.status.loadBalancer.ingress[0].hostname}'):8080/hello
 
 
+== Finally, lets cleanup
+
+Like deleting the EKS cluster and other stuff ..
+
+. Delete EKS cluster:
+
+	eksctl delete cluster --name myeks --region us-west-2
