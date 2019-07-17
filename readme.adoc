@@ -437,6 +437,8 @@ image::images/codepipeline-status.png[]
 
 Like deleting the EKS cluster and other stuff ..
 
+. Delete the Codepipeline cloudformation template:
+
 . Delete EKS cluster:
 
 	eksctl delete cluster --name myeks --region us-west-2
