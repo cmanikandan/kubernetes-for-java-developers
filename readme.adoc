@@ -187,11 +187,31 @@ If Helm has already been initialized on the cluster, then you may have to upgrad
   	curl http://$(kubectl get svc/myapp-greeting \
   		-o jsonpath='{.status.loadBalancer.ingress[0].hostname}'):80/hello
 
-== Debug Docker and Kubernetes using IntelliJ
+== Debug Docker and Kubernetes 
 
 You can debug a Docker container and a Kubernetes Pod if they're running locally on your machine.
 
-=== Debug using Kubernetes
+===
+One of the things that Java developers need to know, is check the application logs, tail the logs and exec into pods. This is well described in this blogpost by Christian Posta - https://blog.christianposta.com/kubernetes/java-remote-debug-for-applications-running-in-kubernetes/ 
+
+. List the pods:
++
+
+	$ kubectl get pod
+	NAME                              READY   STATUS    RESTARTS   AGE
+	myapp-greeting-67dd4bb9d5-r2qts   1/1     Running   0          19h
+
++
+. Tail the logs:
++
+	$  kubectl logs -f myapp-greeting-67dd4bb9d5-r2qts
++
+. Exec into the shell
++
+	$  kubectl exec -it myapp-greeting-67dd4bb9d5-r2qts bash
++
+
+=== Debug using Kubernetes using IntelliJ (Optional)
 
 This was tested using Docker for Mac/Kubernetes. Use the previously deployed Helm chart.
 
