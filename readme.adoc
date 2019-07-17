@@ -191,7 +191,8 @@ If Helm has already been initialized on the cluster, then you may have to upgrad
 
 You can debug a Docker container and a Kubernetes Pod if they're running locally on your machine.
 
-===
+=== Tailing logs ..
+
 One of the things that Java developers need to know, is check the application logs, tail the logs and exec into pods. This is well described in this blogpost by Christian Posta - https://blog.christianposta.com/kubernetes/java-remote-debug-for-applications-running-in-kubernetes/ 
 
 . List the pods:
